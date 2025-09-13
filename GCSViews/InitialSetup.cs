@@ -62,7 +62,7 @@ namespace MissionPlanner.GCSViews
         }
 
         public bool isConnected
-        {
+        { 
             get { return MainV2.comPort.BaseStream.IsOpen; }
         }
 
@@ -156,15 +156,57 @@ namespace MissionPlanner.GCSViews
         {
             ResourceManager rm = new ResourceManager(this.GetType());
 
+            if (!isConnected)
+            {
+                MessageBox.Show(
+                    "Please connect to hardware and download parameters before accessing Setup configuration.",
+                    "Setup Not Available",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error
+                );
+                return;
+            }
+
+
             if (!gotAllParams)
             {
                 if (MainV2.comPort.BaseStream.IsOpen)
                     AddBackstageViewPage(typeof(ConfigParamLoading), Strings.Loading);
             }
 
+            // Keep only the mandatory section and the three required items
+            var mand = AddBackstageViewPage(typeof(ConfigMandatory), rm.GetString("backstageViewPagemand.Text"), isConnected && gotAllParams);
+
+            // Keep only these three items:
+
+            // 1. Accel Calibration
+            if (MainV2.DisplayConfiguration.displayAccelCalibration)
+            {
+                AddBackstageViewPage(typeof(ConfigAccelerometerCalibration), rm.GetString("backstageViewPageaccel.Text"), isConnected && gotAllParams, mand);
+            }
+
+            // 2. Compass
+            if (MainV2.DisplayConfiguration.displayCompassConfiguration)
+            {
+                if (MainV2.comPort.MAV.param.ContainsKey("COMPASS_PRIO1_ID"))
+                    AddBackstageViewPage(typeof(ConfigHWCompass2), rm.GetString("backstageViewPagecompass.Text"),
+                        isConnected && gotAllParams, mand);
+                else
+                    AddBackstageViewPage(typeof(ConfigHWCompass), rm.GetString("backstageViewPagecompass.Text"),
+                        isConnected && gotAllParams, mand);
+            }
+
+            // 3. Radio Calibration
+            if (MainV2.DisplayConfiguration.displayRadioCalibration)
+            {
+                AddBackstageViewPage(typeof(ConfigRadioInput), rm.GetString("backstageViewPageradio.Text"), isConnected && gotAllParams, mand);
+            }
+
+            /* REMOVED ITEMS - Comment out or delete all these sections:
+            
+            // Firmware installation pages
             if (MainV2.DisplayConfiguration.displayInstallFirmware)
             {
-                // if (!Program.WindowsStoreApp)
                 {
                     AddBackstageViewPage(typeof(ConfigFirmwareDisabled), rm.GetString("backstageViewPagefw.Text"),
                         isConnected);
@@ -175,15 +217,11 @@ namespace MissionPlanner.GCSViews
                 }
             }
 
-            AddBackstageViewPage(typeof(ConfigSecureAP), "Secure",
-                isDisConnected);
+            AddBackstageViewPage(typeof(ConfigSecureAP), "Secure", isDisConnected);
 
-
-            var mand = AddBackstageViewPage(typeof(ConfigMandatory), rm.GetString("backstageViewPagemand.Text"), isConnected && gotAllParams);
-
+            // Frame type configurations
             if (MainV2.DisplayConfiguration.displayFrameType)
             {
-                //AddBackstageViewPage(typeof(ConfigTradHeli), rm.GetString("backstageViewPagetradheli.Text"), isHeli && gotAllParams, mand);
                 AddBackstageViewPage(typeof(ConfigTradHeli4), rm.GetString("backstageViewPagetradheli.Text"), isHeli && gotAllParams, mand);
                 AddBackstageViewPage(typeof(ConfigFrameType), rm.GetString("backstageViewPageframetype.Text"), isCopter && gotAllParams && !isCopter35plus, mand);
                 AddBackstageViewPage(typeof(ConfigFrameClassType), rm.GetString("backstageViewPageframetype.Text"),
@@ -191,171 +229,14 @@ namespace MissionPlanner.GCSViews
                     mand);
             }
 
-            if (MainV2.DisplayConfiguration.displayAccelCalibration)
-            {
-                AddBackstageViewPage(typeof(ConfigAccelerometerCalibration), rm.GetString("backstageViewPageaccel.Text"), isConnected && gotAllParams, mand);
-            }
+            // All other configuration items...
+            // (Remove all the other AddBackstageViewPage calls for items you don't want)
+            
+            */
 
-
-            if (MainV2.DisplayConfiguration.displayCompassConfiguration)
-            {
-                if (MainV2.comPort.MAV.param.ContainsKey("COMPASS_PRIO1_ID"))
-                    AddBackstageViewPage(typeof(ConfigHWCompass2), rm.GetString("backstageViewPagecompass.Text"),
-                        isConnected && gotAllParams, mand);
-                else
-                    AddBackstageViewPage(typeof(ConfigHWCompass), rm.GetString("backstageViewPagecompass.Text"),
-                        isConnected && gotAllParams, mand);
-            }
-            if (MainV2.DisplayConfiguration.displayRadioCalibration)
-            {
-                AddBackstageViewPage(typeof(ConfigRadioInput), rm.GetString("backstageViewPageradio.Text"), isConnected && gotAllParams, mand);
-            }
-            if (MainV2.DisplayConfiguration.displayServoOutput)
-            {
-                AddBackstageViewPage(typeof(ConfigRadioOutput), "Servo Output", isConnected && gotAllParams, mand);
-
-            }
-            if (MainV2.DisplayConfiguration.displaySerialPorts)
-            {
-                AddBackstageViewPage(typeof(ConfigSerial), rm.GetString("backstageViewPageSerial.Text"), isConnected && gotAllParams, mand);
-            }
-            if (MainV2.DisplayConfiguration.displayEscCalibration)
-            {
-                AddBackstageViewPage(typeof(ConfigESCCalibration), "ESC Calibration", isConnected && gotAllParams, mand);
-            }
-            if (MainV2.DisplayConfiguration.displayFlightModes)
-            {
-                AddBackstageViewPage(typeof(ConfigFlightModes), rm.GetString("backstageViewPageflmode.Text"), isConnected && gotAllParams, mand);
-            }
-            if (MainV2.DisplayConfiguration.displayFailSafe)
-            {
-                AddBackstageViewPage(typeof(ConfigFailSafe), rm.GetString("backstageViewPagefs.Text"), isConnected && gotAllParams, mand);
-            }
-
-            if ((isCopter || isQuadPlane) && MainV2.DisplayConfiguration.displayInitialParams)
-            {
-                AddBackstageViewPage(typeof(ConfigInitialParams), rm.GetString("backstageViewPageInitialParams.Text"), isConnected && gotAllParams, mand);
-            }
-
-            if (MainV2.DisplayConfiguration.displayHWIDs)
-                AddBackstageViewPage(typeof(ConfigHWIDs), "HW ID", isConnected && gotAllParams, mand);
-
-            var opt = AddBackstageViewPage(typeof(ConfigOptional), rm.GetString("backstageViewPageopt.Text"));
-            if (MainV2.DisplayConfiguration.displayRTKInject)
-            {
-                var rtcmStr = rm.GetString("backstageViewPageSerialInjectGPS.Text");
-                if(rtcmStr == null)
-                    {
-                    rtcmStr = "RTK/GPS Inject";
-                }
-                AddBackstageViewPage(typeof(ConfigSerialInjectGPS), rtcmStr, true, opt);
-            }
-
-            AddBackstageViewPage(typeof(ConfigCubeID), "CubeID Update",
-    isConnected, opt);
-
-            if (MainV2.DisplayConfiguration.displaySikRadio)
-            {
-                AddBackstageViewPage(typeof(Sikradio), rm.GetString("backstageViewPageSikradio.Text"), true, opt);
-            }
-
-            if (MainV2.DisplayConfiguration.displayADSB)
-                AddBackstageViewPage(typeof(ConfigADSB), "ADSB", isConnected && gotAllParams, mand);
-
-            if (MainV2.DisplayConfiguration.displayGPSOrder)
-                AddBackstageViewPage(typeof(ConfigGPSOrder), "CAN GPS Order", isConnected && gotAllParams, opt);
-
-            if (MainV2.DisplayConfiguration.displayBattMonitor)
-            {
-                AddBackstageViewPage(typeof(ConfigBatteryMonitoring), rm.GetString("backstageViewPagebatmon.Text"), isConnected && gotAllParams, opt);
-                AddBackstageViewPage(typeof(ConfigBatteryMonitoring2), rm.GetString("backstageViewPageBatt2.Text"), isConnected && gotAllParams, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayCAN)
-            {
-                //AddBackstageViewPage(typeof(ConfigHWCAN), "CAN", isConnected, opt);
-                AddBackstageViewPage(typeof(ConfigDroneCAN), "DroneCAN/UAVCAN", true, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayJoystick)
-            {
-                AddBackstageViewPage(typeof(Joystick.JoystickSetup), "Joystick", true, opt);
-            }
-
-            if (MainV2.DisplayConfiguration.displayCompassMotorCalib)
-            {
-                AddBackstageViewPage(typeof(ConfigCompassMot), rm.GetString("backstageViewPagecompassmot.Text"), isConnected && gotAllParams, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayRangeFinder)
-            {
-                AddBackstageViewPage(typeof(ConfigHWRangeFinder), rm.GetString("backstageViewPagesonar.Text"), isConnected && gotAllParams, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayAirSpeed)
-            {
-                AddBackstageViewPage(typeof(ConfigHWAirspeed), rm.GetString("backstageViewPageairspeed.Text"), isConnected && gotAllParams, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayPx4Flow)
-            {
-                AddBackstageViewPage(typeof(ConfigHWPX4Flow), rm.GetString("backstageViewPagePX4Flow.Text"), true, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayOpticalFlow)
-            {
-                AddBackstageViewPage(typeof(ConfigHWOptFlow), rm.GetString("backstageViewPageoptflow.Text"), isConnected && gotAllParams, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayOsd)
-            {
-                AddBackstageViewPage(typeof(ConfigHWOSD), rm.GetString("backstageViewPageosd.Text"), isConnected && gotAllParams, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayCameraGimbal)
-            {
-                AddBackstageViewPage(typeof(ConfigMount), rm.GetString("backstageViewPagegimbal.Text"), isConnected && gotAllParams, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayAntennaTracker)
-            {
-                AddBackstageViewPage(typeof(ConfigAntennaTracker), rm.GetString("backstageViewPageAntTrack.Text"), isTracker, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayMotorTest)
-            {
-                AddBackstageViewPage(typeof(ConfigMotorTest), rm.GetString("backstageViewPageMotorTest.Text"), isConnected && gotAllParams, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayBluetooth)
-            {
-                AddBackstageViewPage(typeof(ConfigHWBT), rm.GetString("backstageViewPagehwbt.Text"), true, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayParachute)
-            {
-                AddBackstageViewPage(typeof(ConfigHWParachute), rm.GetString("backstageViewPageParachute.Text"), isConnected && gotAllParams, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayEsp)
-            {
-                AddBackstageViewPage(typeof(ConfigHWESP8266), rm.GetString("backstageViewPageESP.Text"), isConnected && gotAllParams, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayAntennaTracker)
-            {
-                AddBackstageViewPage(typeof(Antenna.TrackerUI), "Antenna Tracker", true, opt);
-            }
-            if (MainV2.DisplayConfiguration.displayFFTSetup)
-            {
-                AddBackstageViewPage(typeof(ConfigFFT), "FFT Setup", isConnected && gotAllParams, opt);
-            }
-
-            if (MainV2.DisplayConfiguration.isAdvancedMode)
-            {
-                var adv = AddBackstageViewPage(typeof(ConfigAdvanced), "Advanced");
-
-                if (MainV2.DisplayConfiguration.displayTerminal)
-                {
-                    AddBackstageViewPage(typeof(ConfigTerminal), "Terminal", true, adv);
-                }
-
-                if (MainV2.DisplayConfiguration.displayREPL)
-                {
-                    AddBackstageViewPage(typeof(ConfigREPL), "Script REPL", isConnected, adv);
-                }
-            }
-
-
+            // Keep plugin pages if needed
             foreach (var item in pluginViewPages)
             {
-
                 // go through all options
                 if (item.options.HasFlag(pageOptions.isConnected) && !isConnected)
                     continue;
@@ -381,7 +262,7 @@ namespace MissionPlanner.GCSViews
                 AddBackstageViewPage(item.page, item.headerText);
             }
 
-            // remeber last page accessed
+            // Remember last page accessed
             foreach (BackstageViewPage page in backstageView.Pages)
             {
                 if (page.LinkText == lastpagename && page.Show)

@@ -144,19 +144,19 @@ namespace MissionPlanner.Utilities
             //flight Data view
             displayAnenometer = true;
             displayQuickTab = true;
-            displayPreFlightTab = true;
+            displayPreFlightTab = false; // REMOVED
             displayAdvActionsTab = false;
             displaySimpleActionsTab = true;
             displayGaugesTab = true;
             displayStatusTab = false;
-            displayServoTab = false;
-            displayScriptsTab = false;
-            displayTelemetryTab = true;
-            displayDataflashTab = true;
+            displayServoTab = false; // REMOVED
+            displayScriptsTab = false; // REMOVED
+            displayTelemetryTab = false; // REMOVED - was true
+            displayDataflashTab = false; // REMOVED - was true
             displayMessagesTab = true;
-            displayTransponderTab = true;
-            displayAuxFunctionTab = true;
-            displayPayloadTab = true;
+            displayTransponderTab = false; // REMOVED - was true
+            displayAuxFunctionTab = false; // REMOVED - was true
+            displayPayloadTab = false; // REMOVED - was true
 
             //flight plan
             displayRallyPointsMenu = true;
@@ -277,19 +277,19 @@ namespace MissionPlanner.Utilities
                 //flight Data view
                 displayAnenometer = true,
                 displayQuickTab = true,
-                displayPreFlightTab = true,
+                displayPreFlightTab = false, // REMOVED - was true
                 displayAdvActionsTab = false,
                 displaySimpleActionsTab = true,
                 displayGaugesTab = true,
                 displayStatusTab = false,
-                displayServoTab = false,
-                displayScriptsTab = false,
-                displayTelemetryTab = true,
-                displayDataflashTab = true,
+                displayServoTab = false, // REMOVED
+                displayScriptsTab = false, // REMOVED
+                displayTelemetryTab = false, // REMOVED - was true
+                displayDataflashTab = false, // REMOVED - was true
                 displayMessagesTab = true,
-                displayTransponderTab = true,
-                displayAuxFunctionTab = true,
-                displayPayloadTab = true,
+                displayTransponderTab = false, // REMOVED - was true
+                displayAuxFunctionTab = false, // REMOVED - was true
+                displayPayloadTab = false, // REMOVED - was true
 
                 //flight plan
                 displayRallyPointsMenu = true,
@@ -364,19 +364,19 @@ namespace MissionPlanner.Utilities
                 //flight Data view
                 displayAnenometer = true,
                 displayQuickTab = true,
-                displayPreFlightTab = true,
+                displayPreFlightTab = false, // REMOVED - was true
                 displayAdvActionsTab = true,
                 displaySimpleActionsTab = false,
                 displayGaugesTab = true,
                 displayStatusTab = true,
-                displayServoTab = true,
-                displayScriptsTab = true,
-                displayTelemetryTab = true,
-                displayDataflashTab = true,
+                displayServoTab = false, // REMOVED - was true
+                displayScriptsTab = false, // REMOVED - was true
+                displayTelemetryTab = false, // REMOVED - was true
+                displayDataflashTab = false, // REMOVED - was true
                 displayMessagesTab = true,
-                displayTransponderTab = true,
-                displayAuxFunctionTab = true,
-                displayPayloadTab = true,
+                displayTransponderTab = false, // REMOVED - was true
+                displayAuxFunctionTab = false, // REMOVED - was true
+                displayPayloadTab = false, // REMOVED - was true
 
                 //flight plan
                 displayRallyPointsMenu = true,
@@ -443,14 +443,36 @@ namespace MissionPlanner.Utilities
 
         public static DisplayView Custom(this DisplayView v)
         {
-            var result = new DisplayView().Advanced();
+            var result = new DisplayView(); // Use constructor instead of Advanced()
 
             if (File.Exists(custompath) && TryParse(File.ReadAllText(custompath), out result))
             {
                 result.displayName = DisplayNames.Custom;
+                
+                // Enforce removed tabs to stay hidden regardless of what's in the custom config
+                result.displayPreFlightTab = false;  // REMOVED
+                result.displayServoTab = false;      // REMOVED
+                result.displayScriptsTab = false;    // REMOVED
+                result.displayTelemetryTab = false;  // REMOVED
+                result.displayDataflashTab = false;  // REMOVED
+                result.displayTransponderTab = false; // REMOVED
+                result.displayAuxFunctionTab = false; // REMOVED
+                result.displayPayloadTab = false;    // REMOVED
+                
                 return result;
             }
 
+            result = new DisplayView().Advanced();
+
+            result.displayPreFlightTab = false;
+            result.displayServoTab = false;
+            result.displayScriptsTab = false;
+            result.displayTelemetryTab = false;
+            result.displayDataflashTab = false;
+            result.displayTransponderTab = false;
+            result.displayAuxFunctionTab = false;
+            result.displayPayloadTab = false;
+            
             return result;
         }
     }
