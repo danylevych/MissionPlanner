@@ -912,6 +912,20 @@ namespace MissionPlanner
                 }
             }
 
+            // This will remove the loading of 'PreFlight', 'Transponder', 'Servo/Relay',
+            // 'AuxFunction', 'Scripts', 'Payload Control', 'Telemetry & DataFlash Logs'
+            // even after the deleting of the configs file, without manual removing.
+
+            // Force disable unwanted tabs permanently
+            DisplayConfiguration.displayPreFlightTab = false;
+            DisplayConfiguration.displayTransponderTab = false;
+            DisplayConfiguration.displayServoTab = false;
+            DisplayConfiguration.displayAuxFunctionTab = false;
+            DisplayConfiguration.displayScriptsTab = false;
+            DisplayConfiguration.displayPayloadTab = false;
+            DisplayConfiguration.displayTelemetryTab = false;
+            DisplayConfiguration.displayDataflashTab = false;
+
             LayoutChanged += updateLayout;
             LayoutChanged(null, EventArgs.Empty);
 
@@ -1300,7 +1314,7 @@ namespace MissionPlanner
         }
 
         public void MenuSetup_Click(object sender, EventArgs e)
-        { 
+        {
             if (Settings.Instance.GetBoolean("password_protect") == false)
             {
                 MyView.ShowScreen("HWConfig");

@@ -51,7 +51,11 @@ namespace hudonoff
             {
                 {"displayheading", "Heading"},
                 {"displayspeed", "Speed"},
+                {"displayspeedbar", "Speed Bar"},
+                {"displayspeednumbers", "Speed Numbers"},
                 {"displayalt", "Alt"},
+                {"displayaltbar", "Alt Bar"},
+                {"displaymode", "Mode"},
                 {"displayconninfo", "Connection"},
                 {"displayxtrack", "X-Track"},
                 {"displayrollpitch", "Roll/Pitch"},
