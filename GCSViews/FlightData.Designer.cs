@@ -29,6 +29,11 @@ namespace MissionPlanner.GCSViews
             this.groundColorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.setBatteryCellCountToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.showIconsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.setWindowCaptureToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.windowCaptureOptionsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.fitToHudToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.fillHudToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+            this.originalSizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
             this.bindingSourceHud = new System.Windows.Forms.BindingSource(this.components);
             this.contextMenuStripactionstab = new System.Windows.Forms.ContextMenuStrip(this.components);
             this.customizeToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
@@ -462,7 +467,9 @@ namespace MissionPlanner.GCSViews
             this.swapWithMapToolStripMenuItem,
             this.groundColorToolStripMenuItem,
             this.setBatteryCellCountToolStripMenuItem,
-            this.showIconsToolStripMenuItem});
+            this.showIconsToolStripMenuItem,
+            this.setWindowCaptureToolStripMenuItem,
+            this.windowCaptureOptionsToolStripMenuItem});
             this.contextMenuStripHud.Name = "contextMenuStrip2";
             resources.ApplyResources(this.contextMenuStripHud, "contextMenuStripHud");
             // 
@@ -563,6 +570,42 @@ namespace MissionPlanner.GCSViews
             this.showIconsToolStripMenuItem.Name = "showIconsToolStripMenuItem";
             resources.ApplyResources(this.showIconsToolStripMenuItem, "showIconsToolStripMenuItem");
             this.showIconsToolStripMenuItem.Click += new System.EventHandler(this.showIconsToolStripMenuItem_Click);
+            // 
+            // setWindowCaptureToolStripMenuItem
+            // 
+            this.setWindowCaptureToolStripMenuItem.Name = "setWindowCaptureToolStripMenuItem";
+            this.setWindowCaptureToolStripMenuItem.Text = "Capture Window";
+            this.setWindowCaptureToolStripMenuItem.Click += new System.EventHandler(this.setWindowCaptureToolStripMenuItem_Click);
+            // 
+            // windowCaptureOptionsToolStripMenuItem
+            // 
+            this.windowCaptureOptionsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.fitToHudToolStripMenuItem,
+            this.fillHudToolStripMenuItem,
+            this.originalSizeToolStripMenuItem});
+            this.windowCaptureOptionsToolStripMenuItem.Name = "windowCaptureOptionsToolStripMenuItem";
+            this.windowCaptureOptionsToolStripMenuItem.Text = "Window Capture Options";
+            this.windowCaptureOptionsToolStripMenuItem.Visible = false;
+            // 
+            // fitToHudToolStripMenuItem
+            // 
+            this.fitToHudToolStripMenuItem.Checked = true;
+            this.fitToHudToolStripMenuItem.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.fitToHudToolStripMenuItem.Name = "fitToHudToolStripMenuItem";
+            this.fitToHudToolStripMenuItem.Text = "Fit to HUD (Keep Aspect Ratio)";
+            this.fitToHudToolStripMenuItem.Click += new System.EventHandler(this.scaleMode_Click);
+            // 
+            // fillHudToolStripMenuItem
+            // 
+            this.fillHudToolStripMenuItem.Name = "fillHudToolStripMenuItem";
+            this.fillHudToolStripMenuItem.Text = "Fill HUD (May Crop)";
+            this.fillHudToolStripMenuItem.Click += new System.EventHandler(this.scaleMode_Click);
+            // 
+            // originalSizeToolStripMenuItem
+            // 
+            this.originalSizeToolStripMenuItem.Name = "originalSizeToolStripMenuItem";
+            this.originalSizeToolStripMenuItem.Text = "Original Size";
+            this.originalSizeToolStripMenuItem.Click += new System.EventHandler(this.scaleMode_Click);
             // 
             // bindingSourceHud
             // 
@@ -3207,6 +3250,11 @@ namespace MissionPlanner.GCSViews
         private Controls.RelayOptions relayOptions15;
         private Controls.RelayOptions relayOptions16;
         private ToolStripMenuItem gimbalVideoToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem setWindowCaptureToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem windowCaptureOptionsToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem fitToHudToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem fillHudToolStripMenuItem;
+        private System.Windows.Forms.ToolStripMenuItem originalSizeToolStripMenuItem;
         private ToolStripMenuItem gimbalVideoFullSizedToolStripMenuItem;
         private ToolStripMenuItem gimbalVideoMiniToolStripMenuItem;
         private ToolStripMenuItem gimbalVideoPopOutToolStripMenuItem;
