@@ -70,6 +70,8 @@ namespace MissionPlanner.GCSViews
         private WindowCapture _windowCapture;
         private Image _originalBgImage;
         private bool _isWindowCaptureActive = false;
+        private DateTime _lastHudUpdate = DateTime.MinValue;
+        private volatile bool _isUpdatingHud = false;
         
         public enum WindowCaptureScaleMode
         {
@@ -854,6 +856,13 @@ namespace MissionPlanner.GCSViews
 
             // Clean up window capture
             StopWindowCapture();
+            
+            // Clean up original background image if still exists
+            if (_originalBgImage != null)
+            {
+                _originalBgImage.Dispose();
+                _originalBgImage = null;
+            }
 
             if (prop != null)
                 prop.Stop();
@@ -2684,6 +2693,12 @@ namespace MissionPlanner.GCSViews
             Zoomlevel.Minimum = gMapControl1.MapProvider.MinZoom;
             Zoomlevel.Maximum = 24;
             Zoomlevel.Value = Convert.ToDecimal(gMapControl1.Zoom);
+
+            // Store default HUD background for window capture restore functionality
+            if (hud1.bgimage != null && _originalBgImage == null)
+            {
+                _originalBgImage = new Bitmap(hud1.bgimage);
+            }
 
 
             var mnt_mode_paramnames = new List<string> { "MNT1_DEFLT_MODE", "MNT_DEFLT_MODE", "MNT_MODE" };
@@ -6586,15 +6601,15 @@ namespace MissionPlanner.GCSViews
                 // Stop any existing capture
                 StopWindowCapture();
                 
-                // Store original background image
-                _originalBgImage = hud1.bgimage;
+                // Store original background image (clone to avoid reference issues)
+                _originalBgImage = hud1.bgimage != null ? new Bitmap(hud1.bgimage) : null;
                 
                 // Initialize window capture
                 _windowCapture = new WindowCapture();
                 _windowCapture.FrameCaptured += OnFrameCaptured;
                 
-                // Start capture at ~30 FPS
-                _windowCapture.StartCapture(windowHandle, 33);
+                // Start capture at ~20 FPS for better performance
+                _windowCapture.StartCapture(windowHandle, 50);
                 
                 _isWindowCaptureActive = true;
                 setWindowCaptureToolStripMenuItem.Text = "Stop Window Capture";
@@ -6625,13 +6640,22 @@ namespace MissionPlanner.GCSViews
                 // Restore original background
                 if (_originalBgImage != null)
                 {
-                    hud1.bgimage = _originalBgImage;
+                    var oldImage = hud1.bgimage;
+                    hud1.bgimage = new Bitmap(_originalBgImage);
+                    oldImage?.Dispose();
+                    _originalBgImage.Dispose();
                     _originalBgImage = null;
                 }
                 else
                 {
+                    var oldImage = hud1.bgimage;
                     hud1.bgimage = null;
+                    oldImage?.Dispose();
                 }
+                
+                // Force HUD to refresh with restored background
+                hud1.Invalidate();
+                hud1.Refresh();
                 
                 _isWindowCaptureActive = false;
                 setWindowCaptureToolStripMenuItem.Text = "Set Window Capture Background";
@@ -6648,22 +6672,58 @@ namespace MissionPlanner.GCSViews
         {
             try
             {
+                // Skip update if still processing previous frame
+                if (_isUpdatingHud)
+                {
+                    frame?.Dispose();
+                    return;
+                }
+                
+                // Throttle updates to prevent UI freezing (max 20 FPS for HUD)
+                var now = DateTime.UtcNow;
+                if ((now - _lastHudUpdate).TotalMilliseconds < 50)
+                {
+                    frame?.Dispose();
+                    return;
+                }
+                
+                _lastHudUpdate = now;
+                _isUpdatingHud = true;
+
                 // Update HUD background with captured frame
                 // Need to invoke on UI thread
                 if (hud1.InvokeRequired)
                 {
                     hud1.BeginInvoke(new Action(() =>
                     {
-                        UpdateHudBackground(frame);
+                        try
+                        {
+                            UpdateHudBackground(frame);
+                        }
+                        finally
+                        {
+                            _isUpdatingHud = false;
+                            frame?.Dispose();
+                        }
                     }));
                 }
                 else
                 {
-                    UpdateHudBackground(frame);
+                    try
+                    {
+                        UpdateHudBackground(frame);
+                    }
+                    finally
+                    {
+                        _isUpdatingHud = false;
+                        frame?.Dispose();
+                    }
                 }
             }
             catch (Exception ex)
             {
+                _isUpdatingHud = false;
+                frame?.Dispose();
                 log.Error("Error updating HUD background with captured frame", ex);
             }
         }

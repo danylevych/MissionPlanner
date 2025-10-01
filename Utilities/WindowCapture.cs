@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Threading.Tasks;
 
 namespace MissionPlanner.Utilities
 {
@@ -78,6 +79,10 @@ namespace MissionPlanner.Utilities
         private Timer _captureTimer;
         private bool _isCapturing = false;
         private readonly object _captureLock = new object();
+        private DateTime _lastCaptureTime = DateTime.MinValue;
+        private volatile bool _isProcessingFrame = false;
+        private int _frameSkipCount = 0;
+        private const int MAX_FRAME_SKIP = 3; // Skip frames if processing is too slow
 
         public event EventHandler<Bitmap> FrameCaptured;
 
@@ -160,18 +165,55 @@ namespace MissionPlanner.Utilities
         private void CaptureFrame(object state)
         {
             if (!_isCapturing || _targetWindow == IntPtr.Zero) return;
+            
+            // Skip frame if still processing previous one
+            if (_isProcessingFrame)
+            {
+                _frameSkipCount++;
+                if (_frameSkipCount < MAX_FRAME_SKIP)
+                    return;
+                // Force processing if we've skipped too many frames
+            }
+            
+            // Throttle to prevent excessive CPU usage
+            var now = DateTime.UtcNow;
+            if ((now - _lastCaptureTime).TotalMilliseconds < 25) // Max 40 FPS
+                return;
+                
+            _lastCaptureTime = now;
+            _frameSkipCount = 0;
+            _isProcessingFrame = true;
 
             try
             {
-                var bitmap = CaptureWindow(_targetWindow);
-                if (bitmap != null)
+                // Run capture on background thread to avoid UI blocking
+                Task.Run(() =>
                 {
-                    FrameCaptured?.Invoke(this, bitmap);
-                }
+                    try
+                    {
+                        var bitmap = CaptureWindow(_targetWindow);
+                        if (bitmap != null && _isCapturing)
+                        {
+                            FrameCaptured?.Invoke(this, bitmap);
+                        }
+                        else
+                        {
+                            bitmap?.Dispose();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Window capture error: {ex.Message}");
+                    }
+                    finally
+                    {
+                        _isProcessingFrame = false;
+                    }
+                });
             }
             catch (Exception ex)
             {
-                // Log error but don't stop capturing
+                _isProcessingFrame = false;
                 System.Diagnostics.Debug.WriteLine($"Window capture error: {ex.Message}");
             }
         }

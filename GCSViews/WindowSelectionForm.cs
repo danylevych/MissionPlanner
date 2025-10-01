@@ -12,6 +12,8 @@ namespace MissionPlanner.GCSViews
         public WindowCapture.WindowInfo SelectedWindow { get; private set; }
         private Timer _previewTimer;
         private WindowCapture _previewCapture;
+        private DateTime _lastPreviewUpdate = DateTime.MinValue;
+        private volatile bool _isUpdatingPreview = false;
         
         public WindowSelectionForm()
         {
@@ -95,7 +97,7 @@ namespace MissionPlanner.GCSViews
                 
                 _previewCapture = new WindowCapture();
                 _previewCapture.FrameCaptured += OnPreviewFrameCaptured;
-                _previewCapture.StartCapture(window.Handle, 100); // 10 FPS for preview
+                _previewCapture.StartCapture(window.Handle, 200); // 5 FPS for preview
             }
             catch (Exception ex)
             {
@@ -108,21 +110,56 @@ namespace MissionPlanner.GCSViews
         {
             try
             {
+                // Skip update if still processing previous frame
+                if (_isUpdatingPreview)
+                {
+                    frame?.Dispose();
+                    return;
+                }
+                
+                // Throttle updates for preview (max 5 FPS)
+                var now = DateTime.UtcNow;
+                if ((now - _lastPreviewUpdate).TotalMilliseconds < 200)
+                {
+                    frame?.Dispose();
+                    return;
+                }
+                
+                _lastPreviewUpdate = now;
+                _isUpdatingPreview = true;
+                
                 if (pictureBoxPreview.InvokeRequired)
                 {
                     pictureBoxPreview.BeginInvoke(new Action(() =>
                     {
-                        UpdatePreviewImage(frame);
+                        try
+                        {
+                            UpdatePreviewImage(frame);
+                        }
+                        finally
+                        {
+                            _isUpdatingPreview = false;
+                            frame?.Dispose();
+                        }
                     }));
                 }
                 else
                 {
-                    UpdatePreviewImage(frame);
+                    try
+                    {
+                        UpdatePreviewImage(frame);
+                    }
+                    finally
+                    {
+                        _isUpdatingPreview = false;
+                        frame?.Dispose();
+                    }
                 }
             }
             catch
             {
-                // Ignore preview update errors
+                _isUpdatingPreview = false;
+                frame?.Dispose();
             }
         }
 
