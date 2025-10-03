@@ -41,6 +41,8 @@ namespace MissionPlanner.GCSViews
             this.pictureBoxPreview = new System.Windows.Forms.PictureBox();
             this.lblPreview = new System.Windows.Forms.Label();
             this.splitContainer1 = new System.Windows.Forms.SplitContainer();
+            this.comboBoxCaptureMethod = new System.Windows.Forms.ComboBox();
+            this.lblCaptureMethod = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.pictureBoxPreview)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.splitContainer1)).BeginInit();
             this.splitContainer1.Panel1.SuspendLayout();
@@ -50,12 +52,14 @@ namespace MissionPlanner.GCSViews
             // 
             // listBoxWindows
             // 
-            this.listBoxWindows.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.listBoxWindows.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
             this.listBoxWindows.FormattingEnabled = true;
             this.listBoxWindows.ItemHeight = 16;
             this.listBoxWindows.Location = new System.Drawing.Point(0, 0);
             this.listBoxWindows.Name = "listBoxWindows";
-            this.listBoxWindows.Size = new System.Drawing.Size(350, 308);
+            this.listBoxWindows.Size = new System.Drawing.Size(350, 255);
             this.listBoxWindows.TabIndex = 0;
             this.listBoxWindows.SelectedIndexChanged += new System.EventHandler(this.listBoxWindows_SelectedIndexChanged);
             this.listBoxWindows.DoubleClick += new System.EventHandler(this.listBoxWindows_DoubleClick);
@@ -129,6 +133,8 @@ namespace MissionPlanner.GCSViews
             // 
             // splitContainer1.Panel1
             // 
+            this.splitContainer1.Panel1.Controls.Add(this.comboBoxCaptureMethod);
+            this.splitContainer1.Panel1.Controls.Add(this.lblCaptureMethod);
             this.splitContainer1.Panel1.Controls.Add(this.listBoxWindows);
             // 
             // splitContainer1.Panel2
@@ -138,6 +144,27 @@ namespace MissionPlanner.GCSViews
             this.splitContainer1.Size = new System.Drawing.Size(710, 308);
             this.splitContainer1.SplitterDistance = 350;
             this.splitContainer1.TabIndex = 7;
+            // 
+            // comboBoxCaptureMethod
+            // 
+            this.comboBoxCaptureMethod.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+            this.comboBoxCaptureMethod.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.comboBoxCaptureMethod.FormattingEnabled = true;
+            this.comboBoxCaptureMethod.Location = new System.Drawing.Point(3, 281);
+            this.comboBoxCaptureMethod.Name = "comboBoxCaptureMethod";
+            this.comboBoxCaptureMethod.Size = new System.Drawing.Size(344, 24);
+            this.comboBoxCaptureMethod.TabIndex = 2;
+            // 
+            // lblCaptureMethod
+            // 
+            this.lblCaptureMethod.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.lblCaptureMethod.AutoSize = true;
+            this.lblCaptureMethod.Location = new System.Drawing.Point(3, 262);
+            this.lblCaptureMethod.Name = "lblCaptureMethod";
+            this.lblCaptureMethod.Size = new System.Drawing.Size(107, 16);
+            this.lblCaptureMethod.TabIndex = 1;
+            this.lblCaptureMethod.Text = "Capture Method:";
             // 
             // WindowSelectionForm
             // 
@@ -179,5 +206,7 @@ namespace MissionPlanner.GCSViews
         private System.Windows.Forms.PictureBox pictureBoxPreview;
         private System.Windows.Forms.Label lblPreview;
         private System.Windows.Forms.SplitContainer splitContainer1;
+        private System.Windows.Forms.ComboBox comboBoxCaptureMethod;
+        private System.Windows.Forms.Label lblCaptureMethod;
     }
 }

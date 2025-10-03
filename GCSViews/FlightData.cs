@@ -6523,11 +6523,20 @@ namespace MissionPlanner.GCSViews
                 {
                     if (windowSelectionForm.ShowDialog(this) == DialogResult.OK)
                     {
-                        StartWindowCapture(windowSelectionForm.SelectedWindow.Handle);
+                        // Use null for auto-detect, otherwise use selected method
+                        WindowCapture.CaptureMethod? method = null;
+                        if (!windowSelectionForm.IsAutoDetectSelected)
+                        {
+                            method = windowSelectionForm.SelectedCaptureMethod;
+                        }
+                        
+                        StartWindowCapture(windowSelectionForm.SelectedWindow.Handle, method);
                         
                         // Save settings
                         Settings.Instance["HUD_WindowCaptureHandle"] = windowSelectionForm.SelectedWindow.Handle.ToString();
                         Settings.Instance["HUD_WindowCaptureTitle"] = windowSelectionForm.SelectedWindow.Title;
+                        Settings.Instance["HUD_WindowCaptureMethod"] = windowSelectionForm.IsAutoDetectSelected ? 
+                            "AutoDetect" : windowSelectionForm.SelectedCaptureMethod.ToString();
                     }
                 }
             }
@@ -6594,7 +6603,7 @@ namespace MissionPlanner.GCSViews
             }
         }
 
-        private void StartWindowCapture(IntPtr windowHandle)
+        private void StartWindowCapture(IntPtr windowHandle, WindowCapture.CaptureMethod? captureMethod = null)
         {
             try
             {
@@ -6608,14 +6617,14 @@ namespace MissionPlanner.GCSViews
                 _windowCapture = new WindowCapture();
                 _windowCapture.FrameCaptured += OnFrameCaptured;
                 
-                // Start capture at ~20 FPS for better performance
-                _windowCapture.StartCapture(windowHandle, 50);
+                // Start capture at ~20 FPS for better performance with specified method
+                _windowCapture.StartCapture(windowHandle, 50, captureMethod);
                 
                 _isWindowCaptureActive = true;
                 setWindowCaptureToolStripMenuItem.Text = "Stop Window Capture";
                 windowCaptureOptionsToolStripMenuItem.Visible = true;
                 
-                log.Info("Window capture started successfully");
+                log.Info($"Window capture started successfully with method: {_windowCapture.CurrentCaptureMethod}");
             }
             catch (Exception ex)
             {

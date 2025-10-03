@@ -212,7 +212,7 @@ namespace MissionPlanner.Controls
         public bool displayspeedbar { 
             get { return _displayspeedbar && _displayspeed; }
             set { 
-                if (_displayspeed) // Дозволяємо зміну тільки якщо батьківська властивість увімкнена
+                if (_displayspeed)
                     _displayspeedbar = value;
                 this.Invalidate();
             }
@@ -222,7 +222,7 @@ namespace MissionPlanner.Controls
         public bool displayspeednumbers { 
             get { return _displayspeednumbers && _displayspeed; }
             set { 
-                if (_displayspeed) // Дозволяємо зміну тільки якщо батьківська властивість увімкнена
+                if (_displayspeed)
                     _displayspeednumbers = value;
                 this.Invalidate();
             }
@@ -237,7 +237,6 @@ namespace MissionPlanner.Controls
                     _displayaltbar = false;
                     _displayaltnumbers = false;
                 } else {
-                    // Коли увімкнуємо alt знову, увімкнуємо дочірні властивості
                     _displayaltbar = true;
                     _displayaltnumbers = true;
                 }
@@ -249,7 +248,7 @@ namespace MissionPlanner.Controls
         public bool displayaltbar { 
             get { return _displayaltbar && _displayalt; }
             set { 
-                if (_displayalt) // Дозволяємо зміну тільки якщо батьківська властивість увімкнена
+                if (_displayalt)
                     _displayaltbar = value;
                 this.Invalidate();
             }
@@ -259,14 +258,11 @@ namespace MissionPlanner.Controls
         public bool displayaltnumbers { 
             get { return _displayaltnumbers && _displayalt; }
             set { 
-                if (_displayalt) // Дозволяємо зміну тільки якщо батьківська властивість увімкнена
+                if (_displayalt)
                     _displayaltnumbers = value;
                 this.Invalidate();
             }
         }
-
-        [System.ComponentModel.Browsable(true), DefaultValue(true)]
-        public bool displaymode { get; set; }
 
         [System.ComponentModel.Browsable(true), DefaultValue(true)]
         public bool displayconninfo { get; set; }
@@ -328,7 +324,6 @@ namespace MissionPlanner.Controls
                             displayheading =
                                 displayspeed =
                                     displayalt =
-                                        displaymode =
                                             displayconninfo =
                                                 displayxtrack =
                                                     displayrollpitch = displaygps = bgon = hudon = batteryon = batteryon2 = true;
@@ -2785,16 +2780,14 @@ namespace MissionPlanner.Controls
                         graphicsObject.ResetTransform();
                         graphicsObject.TranslateTransform(0, this.Height / 2);
 
-                        if (displayaltnumbers)
-                        {
-                            drawstring(((int) _alt).ToString("0 ") + altunit, font, 10, (SolidBrush) Brushes.AliceBlue,
-                                scrollbg.Left + 10, -9);
-                        }
+                        drawstring(((int) _alt).ToString("0 ") + altunit, font, 10, (SolidBrush) Brushes.AliceBlue,
+                            scrollbg.Left + 10, -9);
+
                         graphicsObject.ResetTransform();
                     }
 
                     // mode and wp dist and wp text data
-                    if (displayaltnumbers || displaymode)
+                    if (displayaltnumbers)
                     {
                         if (_modechanged.AddSeconds(2) > datetime)
                         {

@@ -55,7 +55,7 @@ namespace hudonoff
                 {"displayspeednumbers", "Speed Numbers"},
                 {"displayalt", "Alt"},
                 {"displayaltbar", "Alt Bar"},
-                {"displaymode", "Mode"},
+                {"displayaltnumbers", "Alt Mode"},
                 {"displayconninfo", "Connection"},
                 {"displayxtrack", "X-Track"},
                 {"displayrollpitch", "Roll/Pitch"},
@@ -68,6 +68,11 @@ namespace hudonoff
                 {"displayAOASSA", "AOA"},
             };
 
+            var parrentOptions = new Dictionary<string, List<string>>(){
+                { "Alt", new List<string>() { "Alt Bar", "Alt Mode" } },
+                { "Speed", new List<string>() { "Speed Bar", "Speed Numbers" } },
+            };
+                
             var hide = Settings.Instance.GetList(configname);
 
             foreach (var item in items)
@@ -82,6 +87,32 @@ namespace hudonoff
                         Settings.Instance.AppendList(configname, item.Value);
                     if (but.Checked)
                         Settings.Instance.RemoveList(configname, item.Value);
+                };
+                but.Click += (s, e) =>
+                {
+                    FlightData.myhud.GetType().GetProperty(item.Key).SetValue(FlightData.myhud, but.Checked);
+
+                    if (!but.Checked)
+                        Settings.Instance.AppendList(configname, item.Value);
+                    else
+                        Settings.Instance.RemoveList(configname, item.Value);
+
+                    if (parrentOptions.ContainsKey(item.Value))
+                    {
+                        foreach (var childName in parrentOptions[item.Value])
+                        {
+                            var child = rootbut.DropDownItems
+                                .OfType<ToolStripMenuItem>()
+                                .FirstOrDefault(x => x.Text == childName);
+
+                            if (child != null)
+                            {
+                                child.Checked = but.Checked;
+                                FlightData.myhud.GetType().GetProperty(items.First(x => x.Value == childName).Key)
+                                    .SetValue(FlightData.myhud, child.Checked);
+                            }
+                        }
+                    }
                 };
                 if (hide.Contains(item.Value))
                 {

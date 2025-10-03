@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
@@ -52,6 +53,36 @@ namespace MissionPlanner.Utilities
         [DllImport("user32.dll")]
         private static extern bool GetWindowRect(IntPtr hwnd, out RECT lpRect);
 
+        [DllImport("user32.dll")]
+        private static extern bool GetClientRect(IntPtr hwnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        private static extern bool ClientToScreen(IntPtr hwnd, ref POINT lpPoint);
+
+        [DllImport("user32.dll")]
+        private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmGetWindowAttribute(IntPtr hwnd, uint dwAttribute, out RECT pvAttribute, int cbAttribute);
+
+        [DllImport("user32.dll")]
+        private static extern bool IsIconic(IntPtr hwnd);
+
+        [DllImport("user32.dll")]
+        private static extern bool ShowWindow(IntPtr hwnd, int nCmdShow);
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct POINT
+        {
+            public int X;
+            public int Y;
+        }
+
+        private const uint PW_CLIENTONLY = 0x1;
+        private const uint PW_RENDERFULLCONTENT = 0x2;
+        private const uint DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+        private const int SW_RESTORE = 9;
+
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT
         {
@@ -63,15 +94,26 @@ namespace MissionPlanner.Utilities
 
         private delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 
+        public enum CaptureMethod
+        {
+            BitBlt,           // Standard BitBlt (fastest)
+            PrintWindow,      // PrintWindow API (works with some protected windows)
+            ScreenCapture     // Capture by screen coordinates (fallback)
+        }
+
         public struct WindowInfo
         {
             public IntPtr Handle;
             public string Title;
             public string ProcessName;
+            public bool IsMinimized;
+            public bool HasDirectX;
 
             public override string ToString()
             {
-                return $"{Title} ({ProcessName})";
+                var status = IsMinimized ? " [Minimized]" : "";
+                var dx = HasDirectX ? " [DirectX]" : "";
+                return $"{Title} ({ProcessName}){status}{dx}";
             }
         }
 
@@ -83,6 +125,8 @@ namespace MissionPlanner.Utilities
         private volatile bool _isProcessingFrame = false;
         private int _frameSkipCount = 0;
         private const int MAX_FRAME_SKIP = 3; // Skip frames if processing is too slow
+        private CaptureMethod _captureMethod = CaptureMethod.BitBlt;
+        
 
         public event EventHandler<Bitmap> FrameCaptured;
 
@@ -109,11 +153,16 @@ namespace MissionPlanner.Utilities
                     GetWindowThreadProcessId(hWnd, out processId);
                     var process = Process.GetProcessById((int)processId);
                     
+                    bool isMinimized = IsIconic(hWnd);
+                    bool hasDirectX = HasDirectXContent(process.ProcessName);
+                    
                     windows.Add(new WindowInfo
                     {
                         Handle = hWnd,
                         Title = title,
-                        ProcessName = process.ProcessName
+                        ProcessName = process.ProcessName,
+                        IsMinimized = isMinimized,
+                        HasDirectX = hasDirectX
                     });
                 }
                 catch
@@ -138,15 +187,17 @@ namespace MissionPlanner.Utilities
 
         private const int STRETCH_HALFTONE = 4;
 
-        public void StartCapture(IntPtr windowHandle, int intervalMs = 33) // ~30 FPS
+        public void StartCapture(IntPtr windowHandle, int intervalMs = 33, CaptureMethod? method = null) // ~30 FPS
         {
             lock (_captureLock)
             {
                 StopCapture();
                 
                 _targetWindow = windowHandle;
+                _captureMethod = method ?? DetectBestCaptureMethod(windowHandle);
                 _isCapturing = true;
                 
+                System.Diagnostics.Debug.WriteLine($"Starting capture with method: {_captureMethod}");
                 _captureTimer = new Timer(CaptureFrame, null, 0, intervalMs);
             }
         }
@@ -220,6 +271,41 @@ namespace MissionPlanner.Utilities
 
         private Bitmap CaptureWindow(IntPtr windowHandle)
         {
+            try
+            {
+                // Try different capture methods
+                switch (_captureMethod)
+                {
+                    case CaptureMethod.PrintWindow:
+                        return CaptureWindowPrintWindow(windowHandle);
+                    case CaptureMethod.ScreenCapture:
+                        return CaptureWindowByScreen(windowHandle);
+                    case CaptureMethod.BitBlt:
+                    default:
+                        return CaptureWindowBitBlt(windowHandle);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Capture failed with {_captureMethod}, trying fallback: {ex.Message}");
+                
+                // Try fallback methods
+                if (_captureMethod != CaptureMethod.PrintWindow)
+                {
+                    try { return CaptureWindowPrintWindow(windowHandle); } catch { }
+                }
+                
+                if (_captureMethod != CaptureMethod.ScreenCapture)
+                {
+                    try { return CaptureWindowByScreen(windowHandle); } catch { }
+                }
+                
+                return null;
+            }
+        }
+
+        private Bitmap CaptureWindowBitBlt(IntPtr windowHandle)
+        {
             if (!GetWindowRect(windowHandle, out RECT rect))
                 return null;
 
@@ -229,14 +315,6 @@ namespace MissionPlanner.Utilities
             if (width <= 0 || height <= 0)
                 return null;
 
-            // Get DPI scaling factor
-            float dpiX, dpiY;
-            using (var g = Graphics.FromHwnd(windowHandle))
-            {
-                dpiX = g.DpiX / 96.0f;
-                dpiY = g.DpiY / 96.0f;
-            }
-
             IntPtr hdcSrc = GetWindowDC(windowHandle);
             if (hdcSrc == IntPtr.Zero)
                 return null;
@@ -245,7 +323,6 @@ namespace MissionPlanner.Utilities
             IntPtr hBitmap = CreateCompatibleBitmap(hdcSrc, width, height);
             IntPtr hOld = SelectObject(hdcDest, hBitmap);
 
-            // Set stretch mode for better quality
             SetStretchBltMode(hdcDest, STRETCH_HALFTONE);
             SetBrushOrgEx(hdcDest, 0, 0, IntPtr.Zero);
 
@@ -259,14 +336,166 @@ namespace MissionPlanner.Utilities
             Bitmap bitmap = Image.FromHbitmap(hBitmap);
             DeleteObject(hBitmap);
 
-            // Set resolution for proper scaling
-            bitmap.SetResolution(96 * dpiX, 96 * dpiY);
+            return bitmap;
+        }
+
+        private Bitmap CaptureWindowPrintWindow(IntPtr windowHandle)
+        {
+            if (!GetWindowRect(windowHandle, out RECT rect))
+                return null;
+
+            int width = rect.Right - rect.Left;
+            int height = rect.Bottom - rect.Top;
+
+            if (width <= 0 || height <= 0)
+                return null;
+
+            // Restore window if minimized
+            if (IsIconic(windowHandle))
+            {
+                ShowWindow(windowHandle, SW_RESTORE);
+                Thread.Sleep(100); // Give time for window to restore
+            }
+
+            var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                IntPtr hdc = graphics.GetHdc();
+                
+                // Try PrintWindow with different flags
+                bool success = PrintWindow(windowHandle, hdc, PW_RENDERFULLCONTENT);
+                if (!success)
+                {
+                    success = PrintWindow(windowHandle, hdc, PW_CLIENTONLY);
+                }
+                
+                graphics.ReleaseHdc(hdc);
+                
+                if (!success)
+                {
+                    bitmap.Dispose();
+                    return null;
+                }
+            }
+
+            return bitmap;
+        }
+
+        private Bitmap CaptureWindowByScreen(IntPtr windowHandle)
+        {
+            if (!GetWindowRect(windowHandle, out RECT rect))
+                return null;
+
+            int width = rect.Right - rect.Left;
+            int height = rect.Bottom - rect.Top;
+
+            if (width <= 0 || height <= 0)
+                return null;
+
+            // Capture by screen coordinates
+            var bitmap = new Bitmap(width, height, PixelFormat.Format32bppArgb);
+            using (var graphics = Graphics.FromImage(bitmap))
+            {
+                graphics.CopyFromScreen(rect.Left, rect.Top, 0, 0, new Size(width, height));
+            }
 
             return bitmap;
         }
 
         public bool IsCapturing => _isCapturing;
         public IntPtr TargetWindow => _targetWindow;
+        public CaptureMethod CurrentCaptureMethod => _captureMethod;
+
+        private CaptureMethod DetectBestCaptureMethod(IntPtr windowHandle)
+        {
+            try
+            {
+                // Get process info
+                uint processId;
+                GetWindowThreadProcessId(windowHandle, out processId);
+                var process = Process.GetProcessById((int)processId);
+                
+                // Check if it's a DirectX/OpenGL application
+                string processName = process.ProcessName.ToLower();
+                if (HasDirectXContent(processName))
+                {
+                    return CaptureMethod.ScreenCapture; // DirectX apps often need screen capture
+                }
+                
+                // Check if window is minimized
+                if (IsIconic(windowHandle))
+                {
+                    return CaptureMethod.PrintWindow; // PrintWindow can capture minimized windows
+                }
+                
+                // Test BitBlt first (fastest)
+                var testBitmap = CaptureWindowBitBlt(windowHandle);
+                if (testBitmap != null && !IsBitmapBlank(testBitmap))
+                {
+                    testBitmap.Dispose();
+                    return CaptureMethod.BitBlt;
+                }
+                testBitmap?.Dispose();
+                
+                // Try PrintWindow
+                testBitmap = CaptureWindowPrintWindow(windowHandle);
+                if (testBitmap != null && !IsBitmapBlank(testBitmap))
+                {
+                    testBitmap.Dispose();
+                    return CaptureMethod.PrintWindow;
+                }
+                testBitmap?.Dispose();
+                
+                // Fallback to screen capture
+                return CaptureMethod.ScreenCapture;
+            }
+            catch
+            {
+                return CaptureMethod.BitBlt; // Default fallback
+            }
+        }
+
+        private static bool HasDirectXContent(string processName)
+        {
+            string[] directxApps = {
+                "chrome", "firefox", "edge", "opera", // Browsers with hardware acceleration
+                "vlc", "mpc-hc", "potplayer", // Video players
+                "obs", "obs64", // Screen recording
+                "game", "unity", "unreal", // Game engines
+                "steam", "origin", "epic", // Game launchers
+                "discord", // Discord with hardware acceleration
+                "blender", "maya", "3dsmax" // 3D software
+            };
+            
+            return directxApps.Any(app => processName.ToLower().Contains(app));
+        }
+
+        private bool IsBitmapBlank(Bitmap bitmap)
+        {
+            if (bitmap == null || bitmap.Width == 0 || bitmap.Height == 0)
+                return true;
+                
+            // Sample a few pixels to check if image is blank/black
+            int sampleCount = Math.Min(100, bitmap.Width * bitmap.Height);
+            int nonBlackPixels = 0;
+            
+            for (int i = 0; i < sampleCount; i++)
+            {
+                int x = (i % 10) * (bitmap.Width / 10);
+                int y = (i / 10) * (bitmap.Height / 10);
+                
+                if (x < bitmap.Width && y < bitmap.Height)
+                {
+                    var pixel = bitmap.GetPixel(x, y);
+                    if (pixel.R > 10 || pixel.G > 10 || pixel.B > 10) // Not completely black
+                    {
+                        nonBlackPixels++;
+                    }
+                }
+            }
+            
+            return nonBlackPixels < (sampleCount * 0.1); // Less than 10% non-black pixels = likely blank
+        }
 
         public void Dispose()
         {

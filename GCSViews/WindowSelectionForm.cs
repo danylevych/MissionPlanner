@@ -10,6 +10,9 @@ namespace MissionPlanner.GCSViews
     public partial class WindowSelectionForm : Form
     {
         public WindowCapture.WindowInfo SelectedWindow { get; private set; }
+        public WindowCapture.CaptureMethod SelectedCaptureMethod { get; private set; }
+        public bool IsAutoDetectSelected { get; private set; }
+        
         private Timer _previewTimer;
         private WindowCapture _previewCapture;
         private DateTime _lastPreviewUpdate = DateTime.MinValue;
@@ -18,6 +21,13 @@ namespace MissionPlanner.GCSViews
         public WindowSelectionForm()
         {
             InitializeComponent();
+            
+            // Initialize capture method combo box
+            comboBoxCaptureMethod.Items.Add("Auto-detect (Recommended)");
+            comboBoxCaptureMethod.Items.Add("BitBlt (Fast)");
+            comboBoxCaptureMethod.Items.Add("PrintWindow (Better compatibility)");
+            comboBoxCaptureMethod.Items.Add("Screen Capture (Best for games)");
+            comboBoxCaptureMethod.SelectedIndex = 0; // Auto-detect by default
             
             // Setup preview timer
             _previewTimer = new Timer();
@@ -241,6 +251,28 @@ namespace MissionPlanner.GCSViews
             if (DialogResult == DialogResult.OK && listBoxWindows.SelectedItem != null)
             {
                 SelectedWindow = (WindowCapture.WindowInfo)listBoxWindows.SelectedItem;
+                
+                // Get selected capture method
+                IsAutoDetectSelected = (comboBoxCaptureMethod.SelectedIndex == 0);
+                
+                switch (comboBoxCaptureMethod.SelectedIndex)
+                {
+                    case 0: // Auto-detect
+                        SelectedCaptureMethod = WindowCapture.CaptureMethod.BitBlt; // Default, will be auto-detected
+                        break;
+                    case 1: // BitBlt
+                        SelectedCaptureMethod = WindowCapture.CaptureMethod.BitBlt;
+                        break;
+                    case 2: // PrintWindow
+                        SelectedCaptureMethod = WindowCapture.CaptureMethod.PrintWindow;
+                        break;
+                    case 3: // Screen Capture
+                        SelectedCaptureMethod = WindowCapture.CaptureMethod.ScreenCapture;
+                        break;
+                    default:
+                        SelectedCaptureMethod = WindowCapture.CaptureMethod.BitBlt;
+                        break;
+                }
             }
             
             base.OnFormClosing(e);
